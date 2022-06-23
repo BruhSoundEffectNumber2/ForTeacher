@@ -8,6 +8,11 @@ namespace ForTeacher
         Pressed,
         Released
     }
+
+    public struct InputEventArgs
+    {
+        public InputEventType type;
+    }
     
     public class Input
     {
@@ -25,11 +30,19 @@ namespace ForTeacher
         }
         private static Input? _instance;
 
+        public delegate void InputKeyEventHandler(
+            InputEventArgs inputArgs,
+            KeyEventArgs eventArgs);
+
+        public delegate void InputMouseEventHandler(
+            InputEventArgs inputArgs,
+            MouseButtonEventArgs eventArgs);
+
         private Dictionary<Keyboard.Key, bool> _keyStates;
         private Dictionary<Mouse.Button, bool> _mouseStates;
 
-        private Dictionary<Keyboard.Key, List<(InputEventType, Action<object, KeyEventArgs>)>> _keyEvents;
-        private Dictionary<Mouse.Button, (InputEventType, Action<object, MouseButtonEventArgs>)> _mouseEvents;
+        private Dictionary<Keyboard.Key, InputKeyEventHandler> _keyEvents;
+        private Dictionary<Mouse.Button, InputMouseEventHandler> _mouseEvents;
 
         public Input()
         {
@@ -40,79 +53,145 @@ namespace ForTeacher
             
             Program.Window.KeyPressed += OnKeyPressed;
             Program.Window.KeyReleased += OnKeyReleased;
-            //Program.Window.MouseButtonPressed += OnMouseButtonPressed;
-            //Program.Window.MouseButtonReleased += OnMouseButtonReleased;
+            Program.Window.MouseButtonPressed += OnMouseButtonPressed;
+            Program.Window.MouseButtonReleased += OnMouseButtonReleased;
         }
 
-        public static void BindKeyEvent(
-            Keyboard.Key key, 
-            InputEventType type, 
-            Action<object, KeyEventArgs> callback)
+        public static void BindKeyEvent(Keyboard.Key key, InputKeyEventHandler handler)
         {
-            // Create the list if needed
             if (Instance._keyEvents.ContainsKey(key) == false)
             {
-                Instance._keyEvents[key] = new();
+                Instance._keyEvents[key] = handler;
+            } else
+            {
+                Instance._keyEvents[key] += handler;
             }
-            
-            Instance._keyEvents[key].Add((type, callback));
-            Instance._keyStates[key] = false;
+
+            if (Instance._keyStates.ContainsKey(key) == false)
+            {
+                Instance._keyStates[key] = false;
+            }
         }
 
-        public static void ResetStates()
+        public static void UnbindKeyEvent(Keyboard.Key key, InputKeyEventHandler handler)
         {
+            if (Instance._keyEvents.ContainsKey(key) == false)
+            {
+                return;
+            }
+
+            if (Instance._keyEvents[key].GetInvocationList().Contains(handler))
+            {
+                Instance._keyEvents[key] -= handler;
+            }
+        }
+
+        public static void BindMouseEvent(Mouse.Button button, InputMouseEventHandler handler)
+        {
+            if (Instance._mouseEvents.ContainsKey(button) == false)
+            {
+                Instance._mouseEvents[button] = handler;
+            }
+            else
+            {
+                Instance._mouseEvents[button] += handler;
+            }
+
+            if (Instance._mouseStates.ContainsKey(button) == false)
+            {
+                Instance._mouseStates[button] = false;
+            }
+        }
+
+        public static void UnbindMouseEvent(Mouse.Button button, InputMouseEventHandler handler)
+        {
+            if (Instance._mouseEvents.ContainsKey(button) == false)
+            {
+                return;
+            }
+
+            if (Instance._mouseEvents[button].GetInvocationList().Contains(handler))
+            {
+                Instance._mouseEvents[button] -= handler;
+            }
+        }
+
+        public static bool IsKeyDown(Keyboard.Key key)
+        {
+            return Keyboard.IsKeyPressed(key);
+        }
+
+        public static bool IsMouseButtonDown(Mouse.Button button)
+        {
+            return Mouse.IsButtonPressed(button);
         }
 
         private void OnKeyPressed(object? sender, KeyEventArgs e)
         {
-            // We only care about events looking for this key
-            if (_keyEvents.ContainsKey(e.Code) == false)
-                return;
-
-            // Ensure event is only fired once
-            if (_keyStates[e.Code] == true)
-                return;
+            if (_keyStates.ContainsKey(e.Code))
+            {
+                // Ensure event is only fired once, but this only matters if we have seen it before
+                if (_keyStates[e.Code] == true)
+                    return;
+            }
 
             _keyStates[e.Code] = true;
 
-            foreach (var keyEvent in _keyEvents[e.Code])
+            if (_keyEvents.ContainsKey(e.Code))
             {
-                if (keyEvent.Item1 == InputEventType.Pressed)
-                {
-                    keyEvent.Item2(this, e);
-                }
+                _keyEvents[e.Code]?.Invoke(new InputEventArgs() { type = InputEventType.Pressed }, e);
             }
         }
 
         private void OnKeyReleased(object? sender, KeyEventArgs e)
         {
-            // We only care about events looking for this key
-            if (_keyEvents.ContainsKey(e.Code) == false)
-                return;
-
-            // Ensure event is only fired once
-            if (_keyStates[e.Code] == false)
-                return;
+            if (_keyStates.ContainsKey(e.Code))
+            {
+                // Ensure event is only fired once, but this only matters if we have seen it before
+                if (_keyStates[e.Code] == false)
+                    return;
+            }
 
             _keyStates[e.Code] = false;
 
-            foreach (var keyEvent in _keyEvents[e.Code])
+            if (_keyEvents.ContainsKey(e.Code))
             {
-                if (keyEvent.Item1 == InputEventType.Released)
-                {
-                    keyEvent.Item2(this, e);
-                }
+                _keyEvents[e.Code]?.Invoke(new InputEventArgs() { type = InputEventType.Released }, e);
             }
         }
 
         private void OnMouseButtonPressed(object? sender, MouseButtonEventArgs e)
         {
-            throw new NotImplementedException();
+            if (_mouseStates.ContainsKey(e.Button))
+            {
+                // Ensure event is only fired once, but this only matters if we have seen it before
+                if (_mouseStates[e.Button] == true)
+                    return;
+            }
+
+            _mouseStates[e.Button] = true;
+
+            if (_mouseEvents.ContainsKey(e.Button))
+            {
+                _mouseEvents[e.Button]?.Invoke(new InputEventArgs() { type = InputEventType.Pressed }, e);
+            }
         }
 
         private void OnMouseButtonReleased(object? sender, MouseButtonEventArgs e)
         {
-            throw new NotImplementedException();
+            if (_mouseStates.ContainsKey(e.Button))
+            {
+                // Ensure event is only fired once, but this only matters if we have seen it before
+                if (_mouseStates[e.Button] == false)
+                    return;
+            }
+
+            _mouseStates[e.Button] = false;
+
+            if (_mouseEvents.ContainsKey(e.Button))
+            {
+                _mouseEvents[e.Button]?.Invoke(new InputEventArgs() { type = InputEventType.Released }, e);
+            }
         }
     }
 }

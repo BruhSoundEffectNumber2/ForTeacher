@@ -17,8 +17,12 @@ namespace ForTeacher.UI
 
         private Button gameOverButton;
 
+        private Levels.GameLevel _level;
+
         public UIManager()
         {
+            _level = (Levels.GameLevel)Program.CurrentLevel;
+
             title = new GameText
             {
                 DisplayedText = "Battleship",
@@ -77,9 +81,18 @@ namespace ForTeacher.UI
                 Visible = false
             };
 
-            gameOverButton.LMBClicked += (s, e) =>
+            gameOverButton.Clicked += (s, e) =>
             {
                 Console.WriteLine("Returning to menu...");
+
+                Program.CurrentLevel.Terminate();
+                Program.CurrentLevel = new Levels.MainMenuLevel();
+                Program.CurrentLevel.Initialize();
+            };
+
+            _level.GameOver += (s, e) =>
+            {
+                gameOverButton.Visible = true;
             };
         }
 
@@ -147,34 +160,21 @@ namespace ForTeacher.UI
             playerLabel.Draw(target, states);
             opponentLabel.Draw(target, states);
 
-            playerShipsLabel.DisplayedText = "Sunken Ships - " + Program.PlayerBoard.TotalSunkShips();
+            playerShipsLabel.DisplayedText = "Sunken Ships - " + _level.PlayerBoard.TotalSunkShips();
             playerShipsLabel.DisplayedText += " / " + Board.MAX_SHIPS;
             playerShipsLabel.Draw(target, states);
 
-            opponentShipsLabel.DisplayedText = "Sunken Ships - " + Program.OpponentBoard.TotalSunkShips();
+            opponentShipsLabel.DisplayedText = "Sunken Ships - " + _level.OpponentBoard.TotalSunkShips();
             opponentShipsLabel.DisplayedText += " / " + Board.MAX_SHIPS;
             opponentShipsLabel.Draw(target, states);
 
-            if (Program.PlanningPhase)
+            phase.DisplayedText = _level.Phase switch
             {
-                phase.DisplayedText = "Player, place your ships.";
-            }
-            else
-            {
-                phase.DisplayedText = "Game is ongoing.";
-            }
-
-            if (Program.GameOver != 0)
-            {
-                phase.DisplayedText = "Game Over. ";
-                phase.DisplayedText += Program.GameOver switch
-                {
-                    1 => "Player wins!",
-                    2 => "AI wins!",
-                    _ => "ERROR W/ GameOver"
-                };
-                gameOverButton.Visible = true;
-            }
+                Levels.Phase.Planning => "Planning",
+                Levels.Phase.Fighting => "Playing",
+                Levels.Phase.Over => "Game Over",
+                _ => "ERROR"
+            };
 
             phase.Draw(target, states);
 
@@ -184,13 +184,13 @@ namespace ForTeacher.UI
         private void DrawShips(RenderTarget target, RenderStates states)
         {
             // We don't need to draw any sunken ships when planning
-            if (Program.PlanningPhase)
+            if (_level.Phase == Levels.Phase.Planning)
                 return;
 
             int i = 0;
 
             // Player's sunken ships
-            foreach (Ship ship in Program.PlayerBoard.Ships)
+            foreach (Ship ship in _level.PlayerBoard.Ships)
             {
                 if (ship.IsSunk() == false)
                     continue;
@@ -213,11 +213,16 @@ namespace ForTeacher.UI
 
             // Opponent's sunken ships
             int opponentTotal = 0;
-            foreach (Ship ship in Program.OpponentBoard.Ships)
-                if (ship.IsSunk())
-                    opponentTotal++;
+            foreach (Ship ship in _level.OpponentBoard.Ships)
+            {
+                if (ship != null)
+                {
+                    if (ship.IsSunk())
+                        opponentTotal++;
+                }
+            }
 
-            foreach (Ship ship in Program.OpponentBoard.Ships)
+            foreach (Ship ship in _level.OpponentBoard.Ships)
             {
                 if (ship.IsSunk() == false)
                     continue;

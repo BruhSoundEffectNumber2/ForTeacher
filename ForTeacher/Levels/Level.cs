@@ -1,6 +1,6 @@
 ﻿using SFML.Graphics;
 
-namespace ForTeacher
+namespace ForTeacher.Levels
 {
     public class Level : Drawable
     {
@@ -12,6 +12,11 @@ namespace ForTeacher
         public virtual void Initialize()
         {
 
+        }
+
+        public virtual void Update(float deltaTime)
+        {
+            
         }
 
         public virtual void Draw(RenderTarget target, RenderStates states)

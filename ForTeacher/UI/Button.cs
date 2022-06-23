@@ -17,13 +17,13 @@ namespace ForTeacher.UI
         public uint TextSize = 24;
         public Color TextColor = new(10, 10, 10);
 
-        public event EventHandler? LMBClicked;
+        public event EventHandler? Clicked;
 
         private GameText text;
         private RectangleShape rect;
         private FloatRect bounds;
 
-        private bool lmbPressed = false;
+        private bool _wasMouseOver = false;
 
         public Button()
         {
@@ -38,8 +38,7 @@ namespace ForTeacher.UI
 
             Update();
 
-            Program.Window.MouseButtonPressed += MouseButtonPressed;
-            Program.Window.MouseButtonReleased += MouseButtonReleased;
+            Input.BindMouseEvent(Mouse.Button.Left, OnButtonClicked);
         }
 
         public void Draw(RenderTarget target, RenderStates states)
@@ -53,38 +52,26 @@ namespace ForTeacher.UI
             target.Draw(text, states);
         }
 
-        private void MouseButtonPressed(object? sender, SFML.Window.MouseButtonEventArgs e)
+        private void OnButtonClicked(InputEventArgs inputArgs, MouseButtonEventArgs eventArgs)
         {
-            if (e.Button != SFML.Window.Mouse.Button.Left || Visible == false)
-                return;
+            if (inputArgs.type == InputEventType.Pressed)
+            {
+                if (bounds.Contains(eventArgs.X, eventArgs.Y))
+                {
+                    _wasMouseOver = true;
+                }
+            } else
+            {
+                if (bounds.Contains(eventArgs.X, eventArgs.Y))
+                {
+                    if (_wasMouseOver)
+                    {
+                        Clicked?.Invoke(this, EventArgs.Empty);
+                    }
+                }
 
-            if (lmbPressed)
-                return;
-
-            Vector2i mousePos = Mouse.GetPosition(Program.Window);
-
-            if (bounds.Contains(mousePos.X, mousePos.Y) == false)
-                return;
-
-            lmbPressed = true;
-        }
-
-        private void MouseButtonReleased(object? sender, SFML.Window.MouseButtonEventArgs e)
-        {
-            if (e.Button != SFML.Window.Mouse.Button.Left || Visible == false)
-                return;
-
-            if (lmbPressed == false)
-                return;
-
-            Vector2i mousePos = Mouse.GetPosition(Program.Window);
-
-            if (bounds.Contains(mousePos.X, mousePos.Y) == false)
-                return;
-
-            lmbPressed = false;
-
-            LMBClicked?.Invoke(this, new());
+                _wasMouseOver = false;
+            }
         }
 
         private void Update()

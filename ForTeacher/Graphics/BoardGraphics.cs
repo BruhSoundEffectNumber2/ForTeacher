@@ -14,6 +14,8 @@ namespace ForTeacher.Graphics
         private Board data;
         private Vector2f offset;
 
+        private Levels.GameLevel _level;
+
         public BoardGraphics(Board data, Vector2f offset)
         {
             this.data = data;
@@ -23,6 +25,8 @@ namespace ForTeacher.Graphics
                 Bounds = new(1920 - size + cellSize, 0, size - cellSize, size - cellSize);
             else
                 Bounds = new(cellSize, 0, size - cellSize, size - cellSize);
+
+            _level = (Levels.GameLevel)Program.CurrentLevel;
         }
 
         public void Draw(RenderTarget target, RenderStates states)
@@ -162,7 +166,7 @@ namespace ForTeacher.Graphics
 
         private void DrawShipPlacement(RenderTarget target, RenderStates states)
         {
-            if (Program.PlanningPhase == false || data.Player == false)
+            if (_level.Phase != Levels.Phase.Planning || data.Player == false)
                 return;
 
             Vector2i? nullablePos = GetPlayerBoardMousePos();
@@ -172,22 +176,24 @@ namespace ForTeacher.Graphics
 
             Vector2i pos = (Vector2i)nullablePos;
 
-            bool valid = data.ShipPlacementValid(pos.X, pos.Y, Program.PlacingVertically, Program.CurrentlyPlacing);
+            bool valid = data.ShipPlacementValid(pos.X, pos.Y, 
+                _level.PlanningState.PlacingVertically,
+                _level.PlanningState.CurrentlyPlacing);
 
             RectangleShape rect = new RectangleShape
             {
                 Position = offset + new Vector2f((pos.X + 1) * cellSize, size - (pos.Y + 1) * cellSize),
-                Size = new(cellSize, cellSize * Ship.FindLength(Program.CurrentlyPlacing)),
-                Origin = new(0, Ship.FindLength(Program.CurrentlyPlacing) * cellSize),
+                Size = new(cellSize, cellSize * Ship.FindLength(_level.PlanningState.CurrentlyPlacing)),
+                Origin = new(0, Ship.FindLength(_level.PlanningState.CurrentlyPlacing) * cellSize),
                 FillColor = valid ? Color.Green : Color.Red,
-                Rotation = Program.PlacingVertically ? 0 : 90,
+                Rotation = _level.PlanningState.PlacingVertically ? 0 : 90,
             };
 
             // Adjust origin if rotating
-            if (Program.PlacingVertically == false)
+            if (_level.PlanningState.PlacingVertically == false)
                 rect.Position -= new Vector2f(0, cellSize);
 
-            rect.Texture = Ship.GetTexture(Program.CurrentlyPlacing);
+            rect.Texture = Ship.GetTexture(_level.PlanningState.CurrentlyPlacing);
 
             target.Draw(rect, states);
         }
