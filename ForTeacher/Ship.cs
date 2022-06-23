@@ -1,4 +1,6 @@
-﻿namespace ForTeacher.Logic
+﻿using SFML.Graphics;
+
+namespace ForTeacher
 {
     public enum ShipType
     {
@@ -15,6 +17,7 @@
         public int Y { get; init; }
         public bool Vertical { get; init; }
         public int Length { get; init; }
+        public ShipType Type { get; init; }
 
         /// <summary>
         /// An array of sections of this ship that have been hit.
@@ -28,7 +31,8 @@
             Y = y;
             Vertical = vertical;
 
-            Length = FindShipLength(type);
+            Type = type;
+            Length = FindLength(type);
 
             Hits = new bool[Length];
         }
@@ -82,6 +86,17 @@
             }
         }
 
+        public (int, int) PosOfIndex(int i)
+        {
+            if (Vertical)
+            {
+                return (X, Y + i);
+            } else
+            {
+                return (X + i, Y);
+            }
+        }
+
         public bool IsSunk()
         {
             foreach (bool hit in Hits)
@@ -92,7 +107,7 @@
             return true;
         }
 
-        public static int FindShipLength(ShipType type) => type switch
+        public static int FindLength(ShipType type) => type switch
         {
             ShipType.Carrier => 5,
             ShipType.Battleship => 4,
@@ -101,5 +116,22 @@
             ShipType.PatrolBoat => 2,
             _ => throw new ArgumentOutOfRangeException("Invalid enum. Value of: " + (int)type),
         };
+
+        public static Texture GetTexture(ShipType type)
+        {
+            Texture tex = new(type switch
+            {
+                ShipType.Carrier => ResourceLoader.Get<Image>("Carrier"),
+                ShipType.Battleship => ResourceLoader.Get<Image>("Battleship"),
+                ShipType.Destroyer => ResourceLoader.Get<Image>("Destroyer"),
+                ShipType.Submarine => ResourceLoader.Get<Image>("Submarine"),
+                ShipType.PatrolBoat => ResourceLoader.Get<Image>("PatrolBoat"),
+                _ => throw new Exception("ShipType is out of bounds")
+            });
+
+            tex.GenerateMipmap();
+
+            return tex;
+        }
     }
 }
