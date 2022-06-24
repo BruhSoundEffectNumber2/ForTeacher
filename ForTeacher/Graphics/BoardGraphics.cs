@@ -108,8 +108,8 @@ namespace ForTeacher.Graphics
                 if (ship == null)
                     continue;
 
-                //if (data.Player == false && ship.IsSunk() == false)
-                //    continue;
+                if (data.Player == false && ship.IsSunk() == false)
+                    continue;
 
                 RectangleShape rect = new()
                 {

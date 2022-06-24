@@ -176,6 +176,13 @@ namespace ForTeacher.UI
                 _ => "ERROR"
             };
 
+            phase.DisplayedText += _level.Winner switch
+            {
+                Levels.PlayerOptions.Player => " - Player won!",
+                Levels.PlayerOptions.AI => " - AI won!",
+                _ => ""
+            };
+
             phase.Draw(target, states);
 
             gameOverButton.Draw(target, states);
