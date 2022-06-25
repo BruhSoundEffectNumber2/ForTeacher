@@ -1,13 +1,19 @@
 ﻿using SFML.System;
 using SFML.Audio;
 using System.Timers;
+using FStudio = FMOD.Studio;
 
 namespace ForTeacher.AudioSystem
 {
+    
     public class AudioManager
     {
         public MusicManager MusicManager { get; private set; }
         public AmbienceManager AmbienceManager { get; private set; }
+
+        // FMOD
+        private FStudio.System _fSystem;
+        private FStudio.Bank _bMaster;
 
         private Levels.GameLevel _gameLevel;
 
@@ -22,6 +28,20 @@ namespace ForTeacher.AudioSystem
 
         public AudioManager()
         {
+            // Initialize FMOD
+            // The FMOD Core runtime needs to be loaded before the Studio
+            // runtime, so we call a innocuous Core function before anything else
+            FMOD.Memory.GetStats(out _, out _);
+            FStudio.System.create(out _fSystem);
+            _fSystem.initialize(64, FStudio.INITFLAGS.NORMAL, FMOD.INITFLAGS.NORMAL, IntPtr.Zero);
+
+            _fSystem.loadBankFile("Resources/Audio/FMOD/Desktop/Master.bank", FStudio.LOAD_BANK_FLAGS.NORMAL, out _bMaster);
+
+            _bMaster.getEventList(out var descriptions);
+            descriptions[0].createInstance(out var instance);
+            instance.start();
+            instance.release();
+            
             MusicManager = new();
             AmbienceManager = new();
 
@@ -34,6 +54,17 @@ namespace ForTeacher.AudioSystem
 
             _missileTimer = new();
             _missileTimer.Elapsed += OnShipFiredTimerComplete;
+        }
+
+        public void Update()
+        {
+            _fSystem.update();
+        }
+
+        public void Shutdown()
+        {
+            _bMaster.unload();
+            _fSystem.release();
         }
 
         private void OnLevelChanged(object? sender, EventArgs e)

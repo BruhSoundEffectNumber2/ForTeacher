@@ -66,6 +66,9 @@ namespace ForTeacher
             // Events
             Window.Closed += (s, e) =>
             {
+                // FMOD needs to be shut down before the window is closed
+                AudioManager.Shutdown();
+
                 Window.Close();
             };
 
@@ -102,6 +105,7 @@ namespace ForTeacher
 
                     // Update
                     CurrentLevel.Update(DeltaTime);
+                    AudioManager.Update();
 
                     // Graphics
                     Window.Clear(BACKGROUND_COLOR);
