@@ -1,24 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using SFML.System;
-using SFML.Graphics;
+﻿using SFML.Graphics;
+using SFML.Audio;
 
 namespace ForTeacher
 {
-    public enum ResourceType
-    {
-        Image,
-        Font
-    }
-
     public static class ResourceLoader
     {
         static readonly Dictionary<string, object> _resources = new();
 
-        public static bool Load(ResourceType type, string path, string name)
+        public static bool Load<T>(string path, string name)
         {
             path = "Resources/" + path;
 
@@ -27,23 +16,16 @@ namespace ForTeacher
                 return false;
             }
 
-            switch (type)
+            try
             {
-                case ResourceType.Image:
-                    try
-                    {
-                        _resources[name] = new Image(path);
-                        break;
-                    } catch { return false; }
+                var res = Activator.CreateInstance(typeof(T), new object[] { path });
 
-                case ResourceType.Font:
-                    try
-                    {
-                        _resources[name] = new Font(path);
-                        break;
-                    }
-                    catch { return false; }
+                if (res == null)
+                    return false;
+
+                _resources.Add(name, res);
             }
+            catch (Exception e) { Console.WriteLine(e); return false; }
 
             return true;
         }
@@ -52,7 +34,7 @@ namespace ForTeacher
         {
             if (_resources.ContainsKey(name) == false)
             {
-                throw new Exception("Could not find a resource named: {name}");
+                throw new Exception("Could not find a resource named: " + name);
             }
 
             return (T)_resources[name];

@@ -35,13 +35,19 @@ namespace ForTeacher.Levels
         public AI AI { get; private set; }
 
         // State
+        public bool BlockAction { get; set; } = false;
         public Phase Phase { get; private set; }
         public PlayerOptions Turn { get; private set; }
         public PlayerOptions Winner { get; private set; }
         public PlanningPhaseState PlanningState { get { return _planningState; } }
 
         // Events
-        public event EventHandler GameOver;
+        public event EventHandler<Phase> PhaseChanged;
+        /// <summary>
+        /// Event for a ship firing. <br/>
+        /// Tuple: Player fired, Hit ship, sank ship.
+        /// </summary>
+        public event EventHandler<(bool, bool, bool)> ShipFired;
 
         private PlanningPhaseState _planningState;
 
@@ -68,6 +74,8 @@ namespace ForTeacher.Levels
             // Bind planning input
             Input.BindMouseEvent(Mouse.Button.Left, PlacePlayerShip);
             Input.BindKeyEvent(Keyboard.Key.R, RotatePlacingPlayerShip);
+
+            PhaseChanged?.Invoke(this, Phase);
         }
 
         public override void Update(float deltaTime)
@@ -79,13 +87,13 @@ namespace ForTeacher.Levels
                 if (Phase != Phase.Over)
                 {
                     Phase = Phase.Over;
-                    GameOver?.Invoke(this, EventArgs.Empty);
+                    PhaseChanged?.Invoke(this, Phase);
                 }
 
                 return;
             }
 
-            if (Turn == PlayerOptions.AI)
+            if (Turn == PlayerOptions.AI && BlockAction == false)
                 AITurn();
         }
 
@@ -145,6 +153,8 @@ namespace ForTeacher.Levels
 
             Phase = Phase.Fighting;
             Turn = PlayerOptions.Player;
+
+            PhaseChanged?.Invoke(this, Phase);
 
             // Change input bindings for fighting
             Input.UnbindMouseEvent(Mouse.Button.Left, PlacePlayerShip);
@@ -211,7 +221,7 @@ namespace ForTeacher.Levels
             if (inputArgs.type != InputEventType.Released)
                 return;
 
-            if (Turn != PlayerOptions.Player)
+            if (Turn != PlayerOptions.Player || BlockAction)
                 return;
 
             if (GraphicsManager.OpponentBoard.Bounds.Contains(eventArgs.X, eventArgs.Y))
@@ -220,20 +230,27 @@ namespace ForTeacher.Levels
                 if (OpponentBoard.Markers[pos.X, pos.Y] == MarkerType.None)
                 {
                     // Determine if we are over a ship
+                    bool hitShip = false;
+                    bool sankShip = false;
+                    
                     foreach (Ship ship in OpponentBoard.Ships)
                     {
                         if (ship.IsOn(pos.X, pos.Y))
                         {
                             ship.Hit(pos.X, pos.Y);
-                            OpponentBoard.Markers[pos.X, pos.Y] = MarkerType.Hit;
-                            Turn = PlayerOptions.AI;
-                            CheckForWinner();
-                            return;
+                            hitShip = true;
+                            sankShip = ship.IsSunk();
+
+                            break;
                         }
                     }
 
-                    OpponentBoard.Markers[pos.X, pos.Y] = MarkerType.Miss;
+                    OpponentBoard.Markers[pos.X, pos.Y] = hitShip ? MarkerType.Hit : MarkerType.Miss;
                     Turn = PlayerOptions.AI;
+                    BlockAction = true;
+
+                    ShipFired?.Invoke(this, (true, hitShip, sankShip));
+
                     CheckForWinner();
                 }
             }
@@ -244,22 +261,28 @@ namespace ForTeacher.Levels
             Vector2i result = AI.DoTurn();
 
             // Determine if we are over a ship
+            bool hitShip = false;
+            bool sankShip = false;
+            
             foreach (Ship ship in PlayerBoard.Ships)
             {
                 if (ship.IsOn(result.X, result.Y))
                 {
                     ship.Hit(result.X, result.Y);
-                    PlayerBoard.Markers[result.X, result.Y] = MarkerType.Hit;
-                    AI.GiveResults(true, ship.IsSunk());
-                    Turn = PlayerOptions.Player;
-                    CheckForWinner();
-                    return;
+                    hitShip = true;
+                    sankShip = ship.IsSunk();
+
+                    break;
                 }
             }
 
-            PlayerBoard.Markers[result.X, result.Y] = MarkerType.Miss;
-            AI.GiveResults(false, false);
+            PlayerBoard.Markers[result.X, result.Y] = hitShip ? MarkerType.Hit : MarkerType.Miss;
+            AI.GiveResults(hitShip, sankShip);
             Turn = PlayerOptions.Player;
+            BlockAction = true;
+
+            ShipFired?.Invoke(this, (false, hitShip, sankShip));
+            
             CheckForWinner();
         }
 

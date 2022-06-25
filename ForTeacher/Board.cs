@@ -32,14 +32,14 @@
             if (ShipPlacementValid(x, y, vertical, type) == false)
                 return false;
 
-            Ships[TotalPlacedShips()] = new(x, y, vertical, type);
+            Ships[TotalPlacedShips()] = new(x, y, vertical, type, Player);
 
             return true;
         } 
 
         public bool ShipPlacementValid(int x, int y, bool vertical, ShipType type)
         {
-            Ship ship = new(x, y, vertical, type);
+            Ship ship = new(x, y, vertical, type, Player);
 
             if (TotalPlacedShips() >= MAX_SHIPS)
                 return false;

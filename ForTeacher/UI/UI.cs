@@ -85,14 +85,13 @@ namespace ForTeacher.UI
             {
                 Console.WriteLine("Returning to menu...");
 
-                Program.CurrentLevel.Terminate();
-                Program.CurrentLevel = new Levels.MainMenuLevel();
-                Program.CurrentLevel.Initialize();
+                Program.ChangeLevel(new Levels.MainMenuLevel());
             };
 
-            _level.GameOver += (s, e) =>
+            _level.PhaseChanged += (s, e) =>
             {
-                gameOverButton.Visible = true;
+                if (e == Levels.Phase.Over)
+                    gameOverButton.Visible = true;
             };
         }
 

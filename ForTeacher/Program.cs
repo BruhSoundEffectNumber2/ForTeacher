@@ -1,8 +1,6 @@
 ﻿using SFML.System;
 using SFML.Window;
 using SFML.Graphics;
-using ForTeacher.UI;
-using ForTeacher.Graphics;
 
 namespace ForTeacher
 {
@@ -23,21 +21,36 @@ namespace ForTeacher
         public static float TotalTimeElapsed { get; private set; }
 
         public static RenderWindow Window;
+        public static AudioSystem.AudioManager AudioManager;
         public static Levels.Level CurrentLevel;
+
+        // Events
+        public static event EventHandler LevelChanged;
 
         public static void Main()
         {
+            // Load Resources - Fonts
+            ResourceLoader.Load<Font>("Graphics/OpenSans.ttf", "OpenSans");
+
             // Load Resources - Ships
-            ResourceLoader.Load(ResourceType.Font, "Graphics/OpenSans.ttf", "OpenSans");
-            ResourceLoader.Load(ResourceType.Image, "Graphics/Ships/Carrier.png", "Carrier");
-            ResourceLoader.Load(ResourceType.Image, "Graphics/Ships/Battleship.png", "Battleship");
-            ResourceLoader.Load(ResourceType.Image, "Graphics/Ships/Destroyer.png", "Destroyer");
-            ResourceLoader.Load(ResourceType.Image, "Graphics/Ships/Submarine.png", "Submarine");
-            ResourceLoader.Load(ResourceType.Image, "Graphics/Ships/PatrolBoat.png", "PatrolBoat");
+            ResourceLoader.Load<Image>("Graphics/Ships/Carrier.png", "Carrier");
+            ResourceLoader.Load<Image>("Graphics/Ships/Battleship.png", "Battleship");
+            ResourceLoader.Load<Image>("Graphics/Ships/Destroyer.png", "Destroyer");
+            ResourceLoader.Load<Image>("Graphics/Ships/Submarine.png", "Submarine");
+            ResourceLoader.Load<Image>("Graphics/Ships/PatrolBoat.png", "PatrolBoat");
 
             // Load Resources - Markers
-            ResourceLoader.Load(ResourceType.Image, "Graphics/Board/Hit.png", "HitMarker");
-            ResourceLoader.Load(ResourceType.Image, "Graphics/Board/Miss.png", "MissMarker");
+            ResourceLoader.Load<Image>("Graphics/Board/Hit.png", "HitMarker");
+            ResourceLoader.Load<Image>("Graphics/Board/Miss.png", "MissMarker");
+
+            // Load Resources - Ambience
+            ResourceLoader.Load<SFML.Audio.Music>("Audio/Ambience/ShipInside.wav", "ShipInside");
+
+            // Load Resources - Effects
+            ResourceLoader.Load<SFML.Audio.SoundBuffer>("Audio/Effects/MissileLaunch.wav", "MissileLaunch");
+            ResourceLoader.Load<SFML.Audio.SoundBuffer>("Audio/Effects/ImpactMiss.wav", "ImpactMiss");
+            ResourceLoader.Load<SFML.Audio.SoundBuffer>("Audio/Effects/ImpactHit.wav", "ImpactHit");
+            ResourceLoader.Load<SFML.Audio.SoundBuffer>("Audio/Effects/ImpactSink.wav", "ImpactSink");
 
             // Setup Window
             ContextSettings settings = new();
@@ -67,6 +80,8 @@ namespace ForTeacher
             CurrentLevel = new Levels.MainMenuLevel();
             CurrentLevel.Initialize();
 
+            AudioManager = new();
+
             while (Window.IsOpen)
             {
                 Window.DispatchEvents();
@@ -94,6 +109,14 @@ namespace ForTeacher
                     Window.Display();
                 }
             }
+        }
+
+        public static void ChangeLevel(Levels.Level level)
+        {
+            CurrentLevel.Terminate();
+            CurrentLevel = level;
+            CurrentLevel.Initialize();
+            LevelChanged?.Invoke(null, EventArgs.Empty);
         }
     }
 }

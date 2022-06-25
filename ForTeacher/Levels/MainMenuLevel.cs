@@ -57,9 +57,7 @@ namespace ForTeacher.Levels
 
         private void StartGame(object? sender, EventArgs args)
         {
-            this.Terminate();
-            Program.CurrentLevel = new GameLevel();
-            Program.CurrentLevel.Initialize();
+            Program.ChangeLevel(new GameLevel());
         }
     }
 }

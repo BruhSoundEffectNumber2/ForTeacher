@@ -18,6 +18,7 @@ namespace ForTeacher
         public bool Vertical { get; init; }
         public int Length { get; init; }
         public ShipType Type { get; init; }
+        public Levels.PlayerOptions Owner { get; init; }
 
         /// <summary>
         /// An array of sections of this ship that have been hit.
@@ -25,13 +26,14 @@ namespace ForTeacher
         /// </summary>
         public bool[] Hits { get; init; }
 
-        public Ship(int x, int y, bool vertical, ShipType type)
+        public Ship(int x, int y, bool vertical, ShipType type, bool player)
         {
             X = x;
             Y = y;
             Vertical = vertical;
-
             Type = type;
+            Owner = player ? Levels.PlayerOptions.Player : Levels.PlayerOptions.AI;
+
             Length = FindLength(type);
 
             Hits = new bool[Length];
