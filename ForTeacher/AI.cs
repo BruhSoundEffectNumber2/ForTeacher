@@ -33,10 +33,7 @@ namespace ForTeacher
 
         public Vector2i DoTurn()
         {
-            if (phase == 1)
-                Phase1();
-            else
-                Phase2();
+            Phase2();
 
             return result;
         }
@@ -46,17 +43,9 @@ namespace ForTeacher
             if (hit)
             {
                 lastHitPosition = result;
-                phase = 2;
-                Console.WriteLine("AI going to phase 2");
             }
 
             UpdateWeights(hit);
-
-            if (sunk)
-            {
-                phase = 1;
-                Console.WriteLine("AI going back to phase 1");
-            }
         }
 
         private void UpdateWeights(bool hit)
@@ -113,7 +102,7 @@ namespace ForTeacher
                 }
             }
 
-            DebugShowWeights();
+            //DebugShowWeights();
         }
 
         private void DebugShowWeights()
@@ -144,7 +133,7 @@ namespace ForTeacher
 
         private void Phase1()
         {
-            Console.WriteLine("AI Move - Phase 1");
+            Debug.Log("AI Move", "Game");
 
             // Pick a random, unmarked position
             while (true)
@@ -161,18 +150,7 @@ namespace ForTeacher
 
         private void Phase2()
         {
-            Console.WriteLine("AI Move - Phase 2");
-
-            while (true)
-            {
-                Vector2i pos = RandomWeightedPoint();
-
-                if (playerBoard.Markers[pos.X, pos.Y] == MarkerType.None)
-                {
-                    result = pos;
-                    return;
-                }
-            }
+            Phase1();
         }
 
         private Vector2i RandomWeightedPoint()

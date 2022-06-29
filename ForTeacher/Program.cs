@@ -58,14 +58,17 @@ namespace ForTeacher
 
             Window = new RenderWindow(
                 new VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), 
-                "Stuff", 
+                "Battleship", 
                 Styles.Close,
                 settings
             );
+            Console.Title = "Battleship";
 
             // Events
             Window.Closed += (s, e) =>
             {
+                Debug.Break();
+                Debug.Log("Shutting Down", "Program");
                 // FMOD needs to be shut down before the window is closed
                 AudioManager.Shutdown();
 

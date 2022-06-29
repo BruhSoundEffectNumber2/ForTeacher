@@ -1,70 +1,33 @@
-﻿using SFML.System;
-using SFML.Audio;
-using System.Timers;
-using FStudio = FMOD.Studio;
+﻿using Studio = FMOD.Studio;
 
 namespace ForTeacher.AudioSystem
 {
-    
     public class AudioManager
     {
         public MusicManager MusicManager { get; private set; }
         public AmbienceManager AmbienceManager { get; private set; }
 
-        // FMOD
-        private FStudio.System _fSystem;
-        private FStudio.Bank _bMaster;
-
         private Levels.GameLevel _gameLevel;
-
-        // Ship firing effect
-        private System.Timers.Timer _missileTimer;
-        private Sound _missileLaunch;
-        private Sound _impactMiss;
-        private Sound _impactHit;
-        private Sound _impactSink;
-        private int _missilePhase;
-        private (bool, bool, bool) _fireInfo;
+        private (bool player, bool hit, bool sink) _shipFireArgs;
 
         public AudioManager()
         {
-            // Initialize FMOD
-            // The FMOD Core runtime needs to be loaded before the Studio
-            // runtime, so we call a innocuous Core function before anything else
-            FMOD.Memory.GetStats(out _, out _);
-            FStudio.System.create(out _fSystem);
-            _fSystem.initialize(64, FStudio.INITFLAGS.NORMAL, FMOD.INITFLAGS.NORMAL, IntPtr.Zero);
+            FMODInterop.Init();
 
-            _fSystem.loadBankFile("Resources/Audio/FMOD/Desktop/Master.bank", FStudio.LOAD_BANK_FLAGS.NORMAL, out _bMaster);
-
-            _bMaster.getEventList(out var descriptions);
-            descriptions[0].createInstance(out var instance);
-            instance.start();
-            instance.release();
-            
             MusicManager = new();
             AmbienceManager = new();
 
             Program.LevelChanged += OnLevelChanged;
-
-            _missileLaunch = new(ResourceLoader.Get<SoundBuffer>("MissileLaunch"));
-            _impactMiss = new(ResourceLoader.Get<SoundBuffer>("ImpactMiss"));
-            _impactHit = new(ResourceLoader.Get<SoundBuffer>("ImpactHit"));
-            _impactSink = new(ResourceLoader.Get<SoundBuffer>("ImpactSink"));
-
-            _missileTimer = new();
-            _missileTimer.Elapsed += OnShipFiredTimerComplete;
         }
 
         public void Update()
         {
-            _fSystem.update();
+            FMODInterop.Update();
         }
 
         public void Shutdown()
         {
-            _bMaster.unload();
-            _fSystem.release();
+            FMODInterop.Shutdown();
         }
 
         private void OnLevelChanged(object? sender, EventArgs e)
@@ -82,59 +45,40 @@ namespace ForTeacher.AudioSystem
             }
         }
 
-        private void OnShipFired(object? sender, (bool, bool, bool) e)
+        private void OnShipFired(object? sender, (bool player, bool hit, bool sink) args)
         {
-            _fireInfo = e;
-
-            // If the player fired, play at high volume, for AI ships we play at
-            // lower volume (to simulate attenuation)
-            _missileLaunch.Volume = _fireInfo.Item1 ? 100 : 25;
-
-            Console.WriteLine("Missile launched");
-            _missileLaunch.Play();
-
-            _missileTimer.Interval = 3000;
-            _missileTimer.Enabled = true;
+            _shipFireArgs = args;
+            Debug.Log("Firing", "Game");
+            FMODInterop.PlayEventOneShot(
+                "MissileLaunch", 
+                new[] { ("Turn", _shipFireArgs.player ? 0f : 1f) }, 
+                OnMissileLaunchDone);
         }
 
-        private void OnShipFiredTimerComplete(object? sender, ElapsedEventArgs e)
+        private void OnMissileLaunchDone(object? sender, Studio.EVENT_CALLBACK_TYPE type)
         {
-            _missilePhase++;
+            if (type != Studio.EVENT_CALLBACK_TYPE.TIMELINE_MARKER)
+                return;
             
-            switch (_missilePhase)
-            {
-                case 1:
-                    // Missile has launched, play impact (water or explosion sfx)
-                    _missileTimer.Interval = 2000;
-                    
-                    if (_fireInfo.Item2 && _fireInfo.Item3 == false)
-                    {
-                        Console.WriteLine("Missile hit");
-                        _impactHit.Volume = _fireInfo.Item1 ? 25 : 100;
-                        _impactHit.Play();
-                    } else if (_fireInfo.Item3 == false)
-                    {
-                        Console.WriteLine("Missile missed");
-                        _impactMiss.Volume = _fireInfo.Item1 ? 25 : 100;
-                        _impactMiss.Play();
-                    } else
-                    {
-                        Console.WriteLine("Mssile sank a ship");
-                        _impactSink.Volume = _fireInfo.Item1 ? 25 : 100;
-                        _impactSink.Play();
-                        _missileTimer.Interval = 4000;
-                    }
+            string impact = "Missile";
+            impact += _shipFireArgs.sink ? "Sink" : _shipFireArgs.hit ? "Hit" : "Miss";
 
-                    _missileTimer.Enabled = true;
-                    break;
-                case 2:
-                    // Missile impact is done, can continue game
-                    Console.WriteLine("Continuing game");
-                    _gameLevel.BlockAction = false;
-                    _missilePhase = 0;
-                    _missileTimer.Enabled = false;
-                    break;
-            }
+            Debug.Log("Impact: " + impact, "Game");
+
+            FMODInterop.PlayEventOneShot(
+                impact,
+                new[] { ("Turn", _shipFireArgs.player ? 0f : 1f) },
+                OnMissileImpactDone);
+        }
+
+        private void OnMissileImpactDone(object? sender, Studio.EVENT_CALLBACK_TYPE type)
+        {
+            if (type != Studio.EVENT_CALLBACK_TYPE.TIMELINE_MARKER)
+                return;
+            
+            Debug.Log("Continuing", "Game");
+            Debug.Break();
+            _gameLevel.BlockAction = false;
         }
 
         private void Game()

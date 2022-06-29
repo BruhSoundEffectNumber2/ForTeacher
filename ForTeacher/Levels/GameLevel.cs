@@ -47,7 +47,7 @@ namespace ForTeacher.Levels
         /// Event for a ship firing. <br/>
         /// Tuple: Player fired, Hit ship, sank ship.
         /// </summary>
-        public event EventHandler<(bool, bool, bool)> ShipFired;
+        public event EventHandler<(bool player, bool hit, bool sink)> ShipFired;
 
         private PlanningPhaseState _planningState;
 
@@ -249,6 +249,7 @@ namespace ForTeacher.Levels
                     Turn = PlayerOptions.AI;
                     BlockAction = true;
 
+                    Debug.Log("Player Move", "Game");
                     ShipFired?.Invoke(this, (true, hitShip, sankShip));
 
                     CheckForWinner();
